@@ -15,14 +15,17 @@ void PLC::setCOM(QString COM_ID, int DelayTime, int Timeout){
     this->Timeout = Timeout;
 }
 
-void PLC::serial_write(QByteArray value){
-    requestData = value;
-    cond.wakeOne();
+void PLC::cmd(PLC_CMD PlcCommand){
+    mutex.lock();
+    //cond.wait(&mutex);
+
+    this->PlcCommand = PlcCommand;
+
+    mutex.unlock();
 }
 
 void PLC::stop(){
     quit = true;
-    cond.wakeOne();
 }
 
 void PLC::run(){
@@ -44,16 +47,34 @@ void PLC::run(){
         return;
     }
 
-    //write and read
-    while(!quit){
-        mutex.lock();
-        cond.wait(&mutex);
+    QByteArray requestData;
+    int bytesWritten;
+    PlcCommand = Read_M; //default
+    PLC_CMD cmding = Read_M;
+    QByteArray station = "00";
+    QByteArray PC = "FF";
 
-        //加這段是程式鎖在上面(待機中)時，此時按stop扭才會處理
-        if(quit){
-            mutex.unlock();
-            break;
+    //write and read
+    while(!quit){        
+
+        //cond.wakeAll(); //解鎖
+        cmding = PlcCommand; //避免 PlcCommand 被更改時，引起判斷上的錯誤
+        PlcCommand = Read_M; //default
+
+        //encode
+        switch (cmding)
+        {
+            case M100_ON:
+                requestData = QString(5).toLocal8Bit() + station + PC + "BW5M01000115A";
+                break;
+            case M100_OFF:
+                requestData = QString(5).toLocal8Bit() + station + PC + "BW5M010001059";
+                break;
+            default: //0 Read_M
+                requestData = QString(5).toLocal8Bit() + station + PC + "BRAM01000433"; //read M100~M103
+                break;
         }
+
 
         //add buffer
         bytesWritten = serial.write(requestData);
@@ -70,14 +91,23 @@ void PLC::run(){
         if(serial.waitForBytesWritten(5000)){
 
             // read response 抓回傳資料
-            if (serial.waitForReadyRead(5000)) { //若一直沒接收到，會在這等待5秒(此時按stop扭雖然不會馬上停止，但quit 還是會被設成false，之後自動跳到後面結束)
+            if (serial.waitForReadyRead(50000)) { //若一直沒接收到，會在這等待5秒(此時按stop扭雖然不會馬上停止，但quit 還是會被設成false，之後自動跳到後面結束)
                 QByteArray responseData = serial.readAll(); //接收到後抓近來
                 while (serial.waitForReadyRead(10)) //看看後面有沒有殘餘資料
                     responseData += serial.readAll();
-                emit status(">..Received :" + responseData.toHex());
-            }else{
-                emit status(tr("Wait read response timeout"));
+                emit status(">" + responseData + "\n" + responseData.toHex());
 
+                //回答了解
+                if(cmding == Read_M){
+                    msleep(50);
+                    serial.write(QString(6).toLocal8Bit() + station + PC); // 06 00 FF
+                    if(!serial.waitForBytesWritten(5000))
+                        emit status(QString("waitForBytesWritten() timed out for port %1, error: %2").
+                            arg(serial.portName()).arg(serial.errorString()));
+                }
+
+            }else{
+                emit status(tr("Wait read response timeout"));                                    
             }
 
             //撿查接收後 是否有錯誤
@@ -90,7 +120,8 @@ void PLC::run(){
                     arg(serial.portName()).arg(serial.errorString()));
         }
 
-        mutex.unlock();
+        msleep(100);
+
     }
 
     if (serial.isOpen())

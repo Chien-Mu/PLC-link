@@ -1,4 +1,4 @@
-#ifndef PLC_H
+﻿#ifndef PLC_H
 #define PLC_H
 
 #include <QThread>
@@ -7,9 +7,10 @@
 #include <QWaitCondition>
 
 typedef enum{
-    X0_ON = 0,
-    X0_OFF
-}PLC_Node;
+    Read_M = 0,
+    M100_ON,
+    M100_OFF
+}PLC_CMD;
 
 class PLC : public QThread{
     Q_OBJECT
@@ -18,17 +19,16 @@ public:
     ~PLC();
     void run();
     void setCOM(QString COM_ID, int DelayTime, int Timeout);
+    void cmd(PLC_CMD PlcCommand);
 
-public slots:
-    void serial_write(QByteArray value);
+public slots:   
     void stop();
 
 private:
     bool quit;
     QMutex mutex;
     QWaitCondition cond;
-    QByteArray requestData;
-    int bytesWritten;
+    PLC_CMD PlcCommand; //只能由 cmd()設定，其餘地方不能設定，以防止PlcCommand命令遺漏
 
     //set
     QString COM_ID;

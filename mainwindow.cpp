@@ -14,13 +14,20 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     //plc
     plc = new PLC();
     connect(this,SIGNAL(plc_quit()),plc,SLOT(stop())); //解除serialport
-    connect(plc,SIGNAL(status(QString)),this,SLOT(setStatus(QString))); //thread打過來的
-    //connect(ui->btn_send,SIGNAL(clicked()),this,SLOT(writeData_thread())); //打過去thread的
+    connect(plc,SIGNAL(status(QString)),this,SLOT(setStatus(QString))); //thread打過來的    
     connect(ui->btn_open,SIGNAL(clicked()),this,SLOT(openSerialPort_thread())); //open
     connect(ui->btn_close,SIGNAL(clicked()),this,SLOT(closeSerialPort_thread())); //close
-
-
+    connect(ui->btn_x0_on,SIGNAL(clicked()),this,SLOT(X0_NO_click()));
+    connect(ui->btn_x0_off,SIGNAL(clicked()),this,SLOT(X0_OFF_click()));
 }
+
+void MainWindow::X0_NO_click(){
+    plc->cmd(M100_ON);
+}
+void MainWindow::X0_OFF_click(){
+    plc->cmd(M100_OFF);
+}
+
 
 void MainWindow::openSerialPort_thread(){
     if(!plc->isRunning()){
@@ -46,7 +53,7 @@ void MainWindow::setStatus(QString value){
     }else if(value == "1"){
         status->setText("Connected");
     }else if(value.at(0) == '>'){
-        ui->pte_receive->appendPlainText(value + " " + value.toLocal8Bit().toHex());
+        ui->pte_receive->appendPlainText(value);
     }else{
         QMessageBox::critical(this, tr("Error"), value);
     }

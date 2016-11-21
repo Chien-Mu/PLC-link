@@ -29,6 +29,9 @@ private slots:
     void getSerialInfo();
     void openSerialPort_thread();
     void closeSerialPort_thread();
+    void X0_NO_click();
+    void X0_OFF_click();
+
 
 public slots:
     void setStatus(QString value);
