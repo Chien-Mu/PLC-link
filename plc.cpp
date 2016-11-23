@@ -47,16 +47,22 @@ void PLC::run(){
         return;
     }
 
-    QByteArray requestData;
-    int bytesWritten;
     PlcCommand = Read_M; //default
     PLC_CMD cmding = Read_M;
     QByteArray station = "00";
     QByteArray PC = "FF";
+    QByteArray STX = QString(2).toLocal8Bit();
+    QByteArray ETX = QString(3).toLocal8Bit();
+    QByteArray ENQ = QString(5).toLocal8Bit();
+    QByteArray ACK = QString(6).toLocal8Bit();
+    QByteArray test = "T";
+    QByteArray requestData,responseData,HeadDate,TailData;
+    int bytesWritten;
+    int RxCount,Headlength,Taillength;
+    bool RxOK = false;
 
     //write and read
-    while(!quit){        
-
+    while(!quit){
         //cond.wakeAll(); //解鎖
         cmding = PlcCommand; //避免 PlcCommand 被更改時，引起判斷上的錯誤
         PlcCommand = Read_M; //default
@@ -65,16 +71,15 @@ void PLC::run(){
         switch (cmding)
         {
             case M100_ON:
-                requestData = QString(5).toLocal8Bit() + station + PC + "BW5M01000115A";
+                requestData = ENQ + station + PC + "BW5M01000115A";
                 break;
             case M100_OFF:
-                requestData = QString(5).toLocal8Bit() + station + PC + "BW5M010001059";
+                requestData = ENQ + station + PC + "BW5M010001059";
                 break;
             default: //0 Read_M
-                requestData = QString(5).toLocal8Bit() + station + PC + "BRAM01000433"; //read M100~M103
+                requestData = ENQ + station + PC + "BR5M01000427"; //read M100~M103
                 break;
         }
-
 
         //add buffer
         bytesWritten = serial.write(requestData);
@@ -90,22 +95,51 @@ void PLC::run(){
         //AP COM push buffer 出去
         if(serial.waitForBytesWritten(5000)){
 
-            // read response 抓回傳資料
-            if (serial.waitForReadyRead(50000)) { //若一直沒接收到，會在這等待5秒(此時按stop扭雖然不會馬上停止，但quit 還是會被設成false，之後自動跳到後面結束)
-                QByteArray responseData = serial.readAll(); //接收到後抓近來
-                while (serial.waitForReadyRead(10)) //看看後面有沒有殘餘資料
+            // read response 抓資料
+            if (serial.waitForReadyRead(5000)) { //若一直沒接收到，會在這等待5秒
+
+                //上筆是否有先抓的資料
+                if(TailData.length() > 0){
+                    responseData = TailData;
+                    TailData = ""; //default
+                    responseData += serial.readAll(); //接收到後抓近來
+                }else
+                    responseData = serial.readAll();
+
+                //抓殘留，等10ms
+                while (serial.waitForReadyRead(10))
                     responseData += serial.readAll();
-                emit status(">" + responseData + "\n" + responseData.toHex());
 
-                //回答了解
                 if(cmding == Read_M){
-                    msleep(50);
-                    serial.write(QString(6).toLocal8Bit() + station + PC); // 06 00 FF
-                    if(!serial.waitForBytesWritten(5000))
-                        emit status(QString("waitForBytesWritten() timed out for port %1, error: %2").
-                            arg(serial.portName()).arg(serial.errorString()));
-                }
+                    //接收到ETX 才會離開，5次機會
+                    RxCount = 0;
+                    RxOK = false;
+                    do{
+                        if(serial.waitForReadyRead(50))
+                            responseData += serial.readAll();
+                        if(responseData.contains(ETX))
+                            RxOK = true;
+                        else
+                            RxCount++;
+                    }while (!RxOK && RxCount < 5); //任一項達成都會跳離
 
+                    //將檢查碼後多餘的接收另存
+                    if(RxOK){
+                        Headlength = responseData.indexOf(ETX) + 3;
+                        Taillength = responseData.length() - Headlength;
+                        HeadDate = responseData.left(Headlength);
+                        TailData = responseData.right(Taillength);
+
+                        //回答ACK了解
+                        serial.write(ACK + station + PC);
+                        if(!serial.waitForBytesWritten(5000))
+                            emit status(QString("waitForBytesWritten() timed out for port %1, error: %2").
+                                arg(serial.portName()).arg(serial.errorString()));
+
+                    }else{
+                        emit status(QString::fromLocal8Bit("傳送 ENQ 後，未讀取到 ETX"));
+                    }
+                }                               
             }else{
                 emit status(tr("Wait read response timeout"));                                    
             }
@@ -120,8 +154,19 @@ void PLC::run(){
                     arg(serial.portName()).arg(serial.errorString()));
         }
 
-        msleep(100);
+        //結果
+        emit status(">HeadDate:" + HeadDate + " " +HeadDate.toHex()
+                    + "\n TailData:" + TailData + " " + TailData.toHex()
+                    + "\n responseData:" + responseData + " " + responseData.toHex()
+                    + "\n RxCount:" + QString::number(RxCount));
 
+        //output
+        if(HeadDate.at(5) == '0')
+            emit M100(false);
+        else if(HeadDate.at(5) == '1')
+            emit M100(true);
+
+        msleep(100);
     }
 
     if (serial.isOpen())

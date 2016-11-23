@@ -10,6 +10,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->statusBar->addWidget(status);
     status->setText("Not connected");
     getSerialInfo();
+    bright.setColor(QPalette::Base,Qt::green);
+    Dark.setColor(QPalette::Base,Qt::darkGreen);
+    ui->LE_m100->setPalette(Dark);
 
     //plc
     plc = new PLC();
@@ -19,6 +22,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(ui->btn_close,SIGNAL(clicked()),this,SLOT(closeSerialPort_thread())); //close
     connect(ui->btn_x0_on,SIGNAL(clicked()),this,SLOT(X0_NO_click()));
     connect(ui->btn_x0_off,SIGNAL(clicked()),this,SLOT(X0_OFF_click()));
+    connect(plc,SIGNAL(M100(bool)),this,SLOT(showLED(bool))); //M100
 }
 
 void MainWindow::X0_NO_click(){
@@ -45,6 +49,13 @@ void MainWindow::getSerialInfo(){
     ui->comboBox->clear();
     foreach (const QSerialPortInfo &info, QSerialPortInfo::availablePorts())
         ui->comboBox->addItem(info.portName());
+}
+
+void MainWindow::showLED(bool value){
+    if(value)
+        ui->LE_m100->setPalette(bright);
+    else
+        ui->LE_m100->setPalette(Dark);
 }
 
 void MainWindow::setStatus(QString value){

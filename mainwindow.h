@@ -24,6 +24,8 @@ private:
     QLabel *status;
     QSerialPort *serial;
     PLC *plc;
+    QPalette bright;
+    QPalette Dark;
 
 private slots:
     void getSerialInfo();
@@ -31,6 +33,7 @@ private slots:
     void closeSerialPort_thread();
     void X0_NO_click();
     void X0_OFF_click();
+    void showLED(bool value);
 
 
 public slots:
