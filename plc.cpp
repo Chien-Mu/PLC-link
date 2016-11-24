@@ -56,7 +56,11 @@ void PLC::run(){
     QByteArray ENQ = QString(5).toLocal8Bit();
     QByteArray ACK = QString(6).toLocal8Bit();
     QByteArray test = "T";
-    QByteArray requestData,responseData,HeadDate,TailData;
+    QByteArray requestData = "";
+    QByteArray responseData = "";
+    QByteArray HeadDate = "";
+    QByteArray TailData = "";
+    QByteArray OriginData = "";
     int bytesWritten;
     int RxCount,Headlength,Taillength;
     bool RxOK = false;
@@ -66,6 +70,7 @@ void PLC::run(){
         //cond.wakeAll(); //解鎖
         cmding = PlcCommand; //避免 PlcCommand 被更改時，引起判斷上的錯誤
         PlcCommand = Read_M; //default
+        RxCount = 0;
 
         //encode
         switch (cmding)
@@ -96,28 +101,28 @@ void PLC::run(){
         if(serial.waitForBytesWritten(5000)){
 
             // read response 抓資料
-            if (serial.waitForReadyRead(5000)) { //若一直沒接收到，會在這等待5秒
+            if (serial.waitForReadyRead(50000)) { //若一直沒接收到，會在這等待5秒
+                OriginData = serial.readAll(); //接收到後抓近來
 
                 //上筆是否有先抓的資料
                 if(TailData.length() > 0){
                     responseData = TailData;
                     TailData = ""; //default
-                    responseData += serial.readAll(); //接收到後抓近來
+                    responseData += OriginData;
                 }else
-                    responseData = serial.readAll();
+                    responseData = OriginData;
 
                 //抓殘留，等10ms
                 while (serial.waitForReadyRead(10))
                     responseData += serial.readAll();
 
                 if(cmding == Read_M){
-                    //接收到ETX 才會離開，5次機會
-                    RxCount = 0;
+                    //接收到ETX 才會離開，5次機會                    
                     RxOK = false;
                     do{
                         if(serial.waitForReadyRead(50))
                             responseData += serial.readAll();
-                        if(responseData.contains(ETX))
+                        if(responseData.contains(test))
                             RxOK = true;
                         else
                             RxCount++;
@@ -125,7 +130,7 @@ void PLC::run(){
 
                     //將檢查碼後多餘的接收另存
                     if(RxOK){
-                        Headlength = responseData.indexOf(ETX) + 3;
+                        Headlength = responseData.indexOf(test) + 3;
                         Taillength = responseData.length() - Headlength;
                         HeadDate = responseData.left(Headlength);
                         TailData = responseData.right(Taillength);
@@ -141,7 +146,7 @@ void PLC::run(){
                     }
                 }                               
             }else{
-                emit status(tr("Wait read response timeout"));                                    
+                emit status("Wait read response timeout");
             }
 
             //撿查接收後 是否有錯誤
@@ -161,10 +166,12 @@ void PLC::run(){
                     + "\n RxCount:" + QString::number(RxCount));
 
         //output
-        if(HeadDate.at(5) == '0')
-            emit M100(false);
-        else if(HeadDate.at(5) == '1')
-            emit M100(true);
+        if(HeadDate.length() >= 6){
+            if(HeadDate.at(5) == '0')
+                emit M100(false);
+            else if(HeadDate.at(5) == '1')
+                emit M100(true);
+        }
 
         msleep(100);
     }
