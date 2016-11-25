@@ -29,7 +29,7 @@ private:
     QMutex mutex;
     QWaitCondition cond;
     PLC_CMD PlcCommand; //只能由 cmd()設定，其餘地方不能設定，以防止PlcCommand命令遺漏
-    void process(QByteArray *value);
+    void process(QByteArray value);
 
     //set
     QString COM_ID;
