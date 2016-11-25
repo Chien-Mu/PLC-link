@@ -28,6 +28,17 @@ void PLC::stop(){
     quit = true;
 }
 
+void PLC::process(QByteArray *value){
+    if(value.length() >= 6){
+        if(value.at(5) == '0')
+            emit M100(false);
+        else if(value.at(5) == '1')
+            emit M100(true);
+    }
+    emit status(">\n buffer:" + value + " - " + value->toHex());
+    value = ""; //default
+}
+
 void PLC::run(){
     quit = false; //這裡要初始化，不然第二次執行時，他會殘留上次執行的值
 
@@ -55,15 +66,15 @@ void PLC::run(){
     QByteArray ETX = QString(3).toLocal8Bit();
     QByteArray ENQ = QString(5).toLocal8Bit();
     QByteArray ACK = QString(6).toLocal8Bit();
-    QByteArray test = "T";
+    QByteArray NAK = QString(15).toLocal8Bit();    
     QByteArray requestData = "";
-    QByteArray responseData = "";
-    QByteArray HeadDate = "";
-    QByteArray TailData = "";
-    QByteArray OriginData = "";
+    QByteArray responseData = "";   
+    QByteArray buffer;
+    QByteArray subBuffer;
     int bytesWritten;
-    int RxCount,Headlength,Taillength;
-    bool RxOK = false;
+    int STXindex,lastSTXindex,ETXindex;,ACKindex,MAKindex,Rxlen;
+    bool Recing = false;
+    bool isprocess = false;
 
     //write and read
     while(!quit){
@@ -102,49 +113,62 @@ void PLC::run(){
 
             // read response 抓資料
             if (serial.waitForReadyRead(50000)) { //若一直沒接收到，會在這等待5秒
-                OriginData = serial.readAll(); //接收到後抓近來
+                responseData = serial.readAll(); //接收到後抓近來
+                emit status(">responseData:" + responseData + " - " +responseData.toHex());
 
-                //上筆是否有先抓的資料
-                if(TailData.length() > 0){
-                    responseData = TailData;
-                    TailData = ""; //default
-                    responseData += OriginData;
-                }else
-                    responseData = OriginData;
+                //上一筆若有特殊狀況殘留
+                if(subBuffer != "")
+                    responseData = subBuffer + responseData;
+                subBuffer = "";
 
-                //抓殘留，等10ms
-                while (serial.waitForReadyRead(10))
-                    responseData += serial.readAll();
+                Rxlen = responseData.length();
+                ETXindex = responseData.lastIndexOf(ETX); //從後面開始找
+                lastSTXindex = responseData.lastIndexOf(STX);
+                STXindex = responseData.indexOf(STX);                
+                ACKindex = responseData.indexOf(ACK);
+                NAKindex = responseData.indexOf(NAK);
 
-                if(cmding == Read_M){
-                    //接收到ETX 才會離開，5次機會                    
-                    RxOK = false;
-                    do{
-                        if(serial.waitForReadyRead(50))
-                            responseData += serial.readAll();
-                        if(responseData.contains(test))
-                            RxOK = true;
-                        else
-                            RxCount++;
-                    }while (!RxOK && RxCount < 5); //任一項達成都會跳離
+                if(STXindex != -1 && ETXindex != -1 && STXindex < ETXindex){ //同時有 STX 與 ETX (不管有沒有在 Rceing 中，以這筆為準)
+                    buffer = responseData.left(ETXindex + 1); //抓字串最後一個 ETX 的前面 STX
 
-                    //將檢查碼後多餘的接收另存
-                    if(RxOK){
-                        Headlength = responseData.indexOf(test) + 3;
-                        Taillength = responseData.length() - Headlength;
-                        HeadDate = responseData.left(Headlength);
-                        TailData = responseData.right(Taillength);
+                    //若ETX後面還有STX
+                    int lastSTXindex_bf = buffer.lastIndexOf(STX);
+                    if(lastSTXindex > lastSTXindex_bf){
+                        subBuffer = responseData.right(Rxlen - lastSTXindex);
+                        Recing = true;
+                    }else
+                        Recing = false;
 
-                        //回答ACK了解
-                        serial.write(ACK + station + PC);
-                        if(!serial.waitForBytesWritten(5000))
-                            emit status(QString("waitForBytesWritten() timed out for port %1, error: %2").
-                                arg(serial.portName()).arg(serial.errorString()));
+                    buffer = buffer.right(buffer.length() - buffer.lastIndexOf(STX)); //取最後一組STX ETX
+                    isprocess = true;
+                }else if(STXindex != -1 && ETXindex == -1 && !Recing){ //只有STX (若上一筆資料正在 Rceing 中，這一筆也沒用了，STX 跟 STX 串聯)
+                    subBuffer = responseData.right(Rxlen - STXindex); //只留後面
+                    Recing = true;
+                }else if(STXindex == -1 && ETXindex != -1 && Recing){ //只有ETX (若上一筆資料不是 Rceing 中，這一筆也沒用了，ETX 前面沒 STX)
+                    buffer = responseData.left(ETXindex + 1); //加入前面 (後面因為沒有STX故刪除)
+                    Recing = false;
+                    isprocess = true;
+                }else if(STXindex == -1 && ETXindex == -1 && Recing){ //都沒有，且在 Rceing 中
+                    subBuffer = responseData;
+                }else if(STXindex != -1 && ETXindex != -1 && STXindex > ETXindex){ //同時有 STX 與 ETX，但第一個STX 在最後一個 ETX後面
+                    buffer = responseData.left(ETXindex + 1); //加入前面
+                    subBuffer = responseData.right(Rxlen - lastSTXindex); //儲存後面
+                    Recing = true;
+                    isprocess = true;
+                }
 
-                    }else{
-                        emit status(QString::fromLocal8Bit("傳送 ENQ 後，未讀取到 ETX"));
-                    }
-                }                               
+                if(isprocess){
+                    //回答ACK了解
+                    serial.write(ACK + station + PC);
+                    if(!serial.waitForBytesWritten(5000))
+                        emit status(QString("waitForBytesWritten() timed out for port %1, error: %2").
+                            arg(serial.portName()).arg(serial.errorString()));
+
+                    //finished
+                    process(&buffer);
+                    isprocess = false;
+                }
+
             }else{
                 emit status("Wait read response timeout");
             }
@@ -160,18 +184,11 @@ void PLC::run(){
         }
 
         //結果
-        emit status(">HeadDate:" + HeadDate + " " +HeadDate.toHex()
+        emit status(">\n s+responseData:" + responseData + " " + responseData.toHex()
                     + "\n TailData:" + TailData + " " + TailData.toHex()
                     + "\n responseData:" + responseData + " " + responseData.toHex()
                     + "\n RxCount:" + QString::number(RxCount));
 
-        //output
-        if(HeadDate.length() >= 6){
-            if(HeadDate.at(5) == '0')
-                emit M100(false);
-            else if(HeadDate.at(5) == '1')
-                emit M100(true);
-        }
 
         msleep(100);
     }
