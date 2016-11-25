@@ -35,7 +35,7 @@ void PLC::process(QByteArray value){
         else if(value.at(5) == '1')
             emit M100(true);
     }
-    emit status(">\n exe:" + value + " - " + value->toHex());
+    emit status(">\n exe:" + value + " - " + value.toHex());
 }
 
 void PLC::run(){
@@ -76,8 +76,7 @@ void PLC::run(){
     while(!quit){
         //cond.wakeAll(); //解鎖
         cmding = PlcCommand; //避免 PlcCommand 被更改時，引起判斷上的錯誤
-        PlcCommand = Read_M; //default
-        RxCount = 0;
+        PlcCommand = Read_M; //default        
 
         //encode
         switch (cmding)
@@ -113,10 +112,10 @@ void PLC::run(){
                 emit status(">responseData:" + responseData + " - " +responseData.toHex());
 
                 for(int i=0 ; i < responseData.length() ; i++){
-                    if(responseData.mid(i,1) == STX && !Recing){
+                    if(responseData.mid(i,1) == STX && !Recing){ //STX 且 not Recing
                         buffer = responseData.mid(i,1);
                         Recing = true;
-                    }else if(responseData.mid(i,1) == ETX && Recing){
+                    }else if(responseData.mid(i,1) == ETX && Recing){ //ETX 且 Recing
                         buffer += responseData.mid(i,1);
                         Recing = false;
 
@@ -129,12 +128,12 @@ void PLC::run(){
                             emit status(QString("waitForBytesWritten() timed out for port %1, error: %2").
                                 arg(serial.portName()).arg(serial.errorString()));
 
-                        buffer = "";
+                        buffer = ""; //process後就全部清除，因為是字元一個一個進來，所以不會影響後面的字元
 
                     }else if(responseData.mid(i,1) == ACK || responseData.mid(i,1) == NAK){
                         buffer = "";
                         Recing = false;
-                    }else if(Recing){
+                    }else if(responseData.mid(i,1) != ETX && responseData.mid(i,1) != STX && Recing){ //累加
                         buffer += responseData.mid(i,1);
                     }
                 }
