@@ -65,7 +65,7 @@ void PLC::run(){
     QByteArray ETX = QString(3).toLocal8Bit();
     QByteArray ENQ = QString(5).toLocal8Bit();
     QByteArray ACK = QString(6).toLocal8Bit();
-    QByteArray NAK = QString(15).toLocal8Bit();    
+    QByteArray NAK = QString(21).toLocal8Bit(); //十進制是21 16進制是15
     QByteArray requestData = "";
     QByteArray responseData = "";   
     QByteArray buffer = "";
@@ -107,7 +107,7 @@ void PLC::run(){
         if(serial.waitForBytesWritten(5000)){
 
             // read response 抓資料
-            if (serial.waitForReadyRead(50000)) { //若一直沒接收到，會在這等待5秒
+            if (serial.waitForReadyRead(5000)) { //若一直沒接收到，會在這等待5秒
                 responseData = serial.readAll(); //接收到後抓近來
                 emit status(">responseData:" + responseData + " - " +responseData.toHex());
 

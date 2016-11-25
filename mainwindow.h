@@ -30,7 +30,6 @@ private:
 private slots:
     void getSerialInfo();
     void openSerialPort_thread();
-    void closeSerialPort_thread();
     void X0_NO_click();
     void X0_OFF_click();
     void showLED(bool value);
@@ -39,8 +38,6 @@ private slots:
 public slots:
     void setStatus(QString value);
 
-signals:
-    void plc_quit();
 };
 
 #endif // MAINWINDOW_H
