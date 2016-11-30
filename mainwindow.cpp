@@ -33,7 +33,7 @@ void MainWindow::X0_OFF_click(){
 
 void MainWindow::openSerialPort_thread(){
     if(!plc->isRunning()){
-        plc->setCOM(ui->comboBox->currentText(),100,0);
+        plc->setCOM(ui->comboBox->currentText(),100,5000);
         plc->start(); //Start
     }
 }

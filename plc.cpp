@@ -107,10 +107,10 @@ void PLC::run(){
                     arg(serial.portName()).arg(serial.errorString()));
 
         //AP COM push buffer 出去
-        if(serial.waitForBytesWritten(5000)){
+        if(serial.waitForBytesWritten(Timeout)){
 
             // read response 抓資料
-            if (serial.waitForReadyRead(5000)) { //若一直沒接收到，會在這等待5秒
+            if (serial.waitForReadyRead(Timeout)) { //若一直沒接收到，會在這等待5秒
                 responseData = serial.readAll(); //接收到後抓近來
                 //emit status(">responseData:" + responseData + " - " +responseData.toHex());
 
@@ -127,7 +127,7 @@ void PLC::run(){
 
                         //回答ACK了解
                         serial.write(ACK + station + PC);
-                        if(!serial.waitForBytesWritten(5000))
+                        if(!serial.waitForBytesWritten(Timeout))
                             emit status(QString("waitForBytesWritten() timed out for port %1, error: %2").
                                 arg(serial.portName()).arg(serial.errorString()));
 
