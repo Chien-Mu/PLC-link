@@ -29,19 +29,22 @@ void PLC::stop(){
 }
 
 void PLC::process(QByteArray value){
-    if(value.length() >= 6){
+    if(value.length() >= 6){ //若回傳一個資料，6是ETX的位置
         if(value.at(5) == '0')
             emit M100(false);
         else if(value.at(5) == '1')
             emit M100(true);
+
+        emit Rx_ENQ(value);
     }
-    emit status(">\n exe:" + value + " - " + value.toHex());
+    //emit status(">\n exe:" + value + " - " + value.toHex());
 }
 
 void PLC::run(){
     quit = false; //這裡要初始化，不然第二次執行時，他會殘留上次執行的值
 
     QSerialPort serial;
+
     //set
     serial.setPortName(COM_ID);
     serial.setBaudRate(QSerialPort::Baud9600);
@@ -109,7 +112,7 @@ void PLC::run(){
             // read response 抓資料
             if (serial.waitForReadyRead(5000)) { //若一直沒接收到，會在這等待5秒
                 responseData = serial.readAll(); //接收到後抓近來
-                emit status(">responseData:" + responseData + " - " +responseData.toHex());
+                //emit status(">responseData:" + responseData + " - " +responseData.toHex());
 
                 for(int i=0 ; i < responseData.length() ; i++){
                     if(responseData.mid(i,1) == STX && !Recing){ //STX 且 not Recing
@@ -153,10 +156,10 @@ void PLC::run(){
         }
 
         //結果
-        emit status(">\n buffer:" + buffer + " " + buffer.toHex()
-                    + "\n =======================");
+        //emit status(">\n buffer:" + buffer + " " + buffer.toHex()
+        //            + "\n =======================");
 
-        msleep(100);
+        msleep(DelayTime);
     }
 
     if (serial.isOpen())

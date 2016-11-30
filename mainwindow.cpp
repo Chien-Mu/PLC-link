@@ -18,8 +18,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     plc = new PLC();           
     connect(ui->btn_open,SIGNAL(clicked()),this,SLOT(openSerialPort_thread())); //open
     connect(ui->btn_close,SIGNAL(clicked()),plc,SLOT(stop())); //close
-    connect(plc,SIGNAL(status(QString)),this,SLOT(setStatus(QString))); //thread打過來的
-    connect(ui->btn_x0_on,SIGNAL(clicked()),this,SLOT(X0_NO_click()));
+    connect(plc,SIGNAL(status(QString)),this,SLOT(setStatus(QString))); //plc 打回來的資訊
+    connect(ui->btn_x0_on,SIGNAL(clicked()),this,SLOT(X0_NO_click())); //命令
     connect(ui->btn_x0_off,SIGNAL(clicked()),this,SLOT(X0_OFF_click()));
     connect(plc,SIGNAL(M100(bool)),this,SLOT(showLED(bool))); //M100
 }
@@ -33,7 +33,7 @@ void MainWindow::X0_OFF_click(){
 
 void MainWindow::openSerialPort_thread(){
     if(!plc->isRunning()){
-        plc->setCOM(ui->comboBox->currentText(),0,0);
+        plc->setCOM(ui->comboBox->currentText(),100,0);
         plc->start(); //Start
     }
 }

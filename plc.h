@@ -39,6 +39,7 @@ private:
 signals:
     void status(QString value);
     void M100(bool value);
+    void Rx_ENQ(QByteArray value);
 
 };
 
