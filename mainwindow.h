@@ -3,8 +3,7 @@
 
 #include <QMainWindow>
 #include <QLabel>
-#include <QtSerialPort/QSerialPort>
-#include <QtSerialPort/QSerialPortInfo>
+
 #include "plc.h"
 
 namespace Ui {
@@ -22,21 +21,18 @@ public:
 private:
     Ui::MainWindow *ui;
     QLabel *status;
-    QSerialPort *serial;
-    PLC *plc;
     QPalette bright;
     QPalette Dark;
+    void getSerialInfo();
+    PLC *plc;
 
 private slots:
-    void getSerialInfo();
-    void openSerialPort_thread();
-    void X0_NO_click();
-    void X0_OFF_click();
-    void showLED(bool value);
-
-
-public slots:
+    void Start();
+    void Stop();
     void setStatus(QString value);
+    void M100_NO_click();
+    void M100_OFF_click();
+    void showLED(QByteArray data);
 
 };
 

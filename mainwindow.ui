@@ -33,7 +33,7 @@
      </widget>
     </item>
     <item row="3" column="0">
-     <widget class="QPushButton" name="btn_x0_on">
+     <widget class="QPushButton" name="btn_m100_on">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
         <horstretch>0</horstretch>
@@ -62,7 +62,7 @@
      </spacer>
     </item>
     <item row="3" column="1">
-     <widget class="QPushButton" name="btn_x0_off">
+     <widget class="QPushButton" name="btn_m100_off">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
         <horstretch>0</horstretch>
@@ -142,7 +142,7 @@
      <x>0</x>
      <y>0</y>
      <width>617</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
   </widget>
