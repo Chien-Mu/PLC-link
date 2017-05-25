@@ -44,7 +44,7 @@ void MainWindow::Start(){
 
     if(!plc->isRunning()){      //在未啟動狀態 PLC object 才能啟動與設定
         //設定 COM，setCOM(COM名稱, 執行週期Delay時間(單位:ms), COM Timeout(單位:ms))
-        plc->setCOM(ui->comboBox->currentText(),100,5000);
+        plc->setCOM(ui->comboBox->currentText(),100,20000);
 
         //設定"週期性 讀取PLC"的讀取命令。
         /* "ENQ00FFBRAM01000130" 讀取 M100 作為範例 */
@@ -103,6 +103,7 @@ void MainWindow::setStatus(QString value){
     if(value == "0"){
         status->setText("Not connected");
     }else if(value == "1"){
+        QMessageBox::information(this,"OPEN",QString::fromLocal8Bit("成功連接"));
         status->setText("Connected");
     }else if(value.at(0) == '>'){
         ui->pte_receive->appendPlainText(value);

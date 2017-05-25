@@ -54,10 +54,10 @@ bool PLC::process(QByteArray value, int DataTotal){
     bool isError = false;
 
     //檢查
-    if(value.length() < 6 + DataTotal ){
+    if(value.length() != (6 + DataTotal) ){
         //6 是必要的字元數，DataTotal 是要求時有幾組
 
-        /* 假設正常資料進來是 13 個字元，檢查不可以設定 == 13，一定要設定大於 13
+        /* 假設正常資料進來是 13 個字元，檢查設定要 == 13，才是合格
          * 因為有時會回傳 value: "\x02""00FFpA\r\"\x0B\x7F""00FF0101000\x03" 垃圾與訊號都會包在一起
          * 而且會發很多次過一會才會給 value: "\x02""00FF0101000\x03" 正確的值
          * 所以要利用 大於13的來判斷是否有誤*/
@@ -174,7 +174,7 @@ void PLC::run(){
                         //output
                         if(process(buffer,convStr.count.toInt())){
                             serial.write(NAK + convStr.station + convStr.PC);  //回答NAK有問題
-                            emit status("Requested, Packet error.Packet:" + buffer);
+                            emit status("Requested, Packet error.Packet: STX " + buffer + " ETX");
                         }else
                             serial.write(ACK + convStr.station + convStr.PC);  //回答ACK了解
 
