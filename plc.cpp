@@ -30,7 +30,7 @@ void PLC::setCOM(QString COM_ID, int DelayTime, int Timeout){
     this->Timeout = Timeout;
 }
 
-void PLC::setRead(PLC_Request value){
+void PLC::setRead(PLC_Request &value){
     this->R_packet = value;
     this->R_packet.isNull = false;
 }

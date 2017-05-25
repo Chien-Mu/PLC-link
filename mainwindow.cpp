@@ -63,7 +63,7 @@ void MainWindow::Start(){
         /* 加入兩組為範例
          * "ENQ00FFBW5M010001059" 設定 M100 OFF
          * "ENQ00FFBW5M01000115A" 設定 M100 ON */
-        /* 執行時再由 triggerWrite() 方法指定執行的設定命令
+        /* 執行時由 triggerWrite() 方法指定執行的設定命令
          * 指定設定命令後，週期循環第二次時若沒指定，則會自動切換成以"讀取PLC"讀取命令執行 */
         QVector<PLC_Request> WriteCmd_list;
         PLC_Request WriteCmd;

@@ -9,14 +9,14 @@
 struct PLC_Request{
     bool isNull;        //要求設定不會用到
     int ident;          //編號(要求讀取時不會用到)
-    QByteArray station;
-    QByteArray PC;
-    QByteArray R_or_W;
-    QByteArray wait;
-    QByteArray index;
-    QByteArray count;
-    QByteArray Data;    //要求讀取時不會用 data
-    QByteArray check;
+    QByteArray station; //站號
+    QByteArray PC;      //PC
+    QByteArray R_or_W;  //指令型態
+    QByteArray wait;    //等待時間
+    QByteArray index;   //起始處
+    QByteArray count;   //共有幾組
+    QByteArray Data;    //Write data(要求讀取時不會用 data)
+    QByteArray check;   //檢查碼
 };
 
 class PLC : public QThread{
@@ -26,7 +26,7 @@ public:
     ~PLC();
     void run();
     void setCOM(QString COM_ID, int DelayTime, int Timeout);
-    void setRead(PLC_Request value);
+    void setRead(PLC_Request &value);
     void setWrite(QVector<PLC_Request> &value);
     void triggerWrite(unsigned index);
 
