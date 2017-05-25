@@ -9,9 +9,7 @@
 * Files: plc.h、plc.cpp
 * include: #include "plc.h"
 
-## PLC Class 架構 ##
-
-1.  Struction PLC_Request (封包結構) 
+### Struction PLC_Request (封包結構) ###
 *  bool isNull;        //要求設定不會用到
 *  int ident;          //編號(要求讀取時不會用到)
 *  QByteArray station; //站號
@@ -23,6 +21,19 @@
 *  QByteArray Data;    //Write data(要求讀取時不會用 data)
 *  QByteArray check;   //檢查碼
 
+### Signals ###
+*  void status(QString value);  //傳遞當下狀態
+*  void RequestData(QByteArray data);  //傳遞讀取指令收到的data(不包含 STX、站號、PC、ETX、檢查碼)
+
+### Slots ###
+*  void stop(); //停止循環
+
+### Functions ###
+*  void setCOM(QString COM_ID, int DelayTime, int Timeout);
+
+    void setRead(PLC_Request value);
+    void setWrite(QVector<PLC_Request> &value);
+    void triggerWrite(unsigned index);
 
 # 範例簡介 #
 
